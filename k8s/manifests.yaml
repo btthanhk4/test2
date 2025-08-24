@@ -1,0 +1,228 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: los
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: los
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: backend }
+  template:
+    metadata:
+      labels: { app: backend }
+    spec:
+      containers:
+        - name: backend
+          image: your-registry/los-backend:1.0.0
+          ports:
+            - containerPort: 3000
+          env:
+            # MongoDB
+            - name: MONGO_URI
+              value: "mongodb://mongodb-headless.core.svc.cluster.local:27017/backend"
+            - name: MONGO_DB
+              value: "backend"
+
+            # Redis
+            - name: REDIS_HOST
+              value: "redis-master.redis-ns.svc.cluster.local"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-secret
+                  key: password
+
+            # MinIO
+            - name: MINIO_ENDPOINT
+              value: "http://minio.core.svc.cluster.local:9000"
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: accessKey
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: secretKey
+            - name: MINIO_BUCKET
+              value: "los-bucket"
+
+            # Integration
+            - name: INTEGRATION_BASE_URL
+              value: "http://integration.los.svc.cluster.local:1880"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: los
+spec:
+  selector: { app: backend }
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: los
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: frontend }
+  template:
+    metadata:
+      labels: { app: frontend }
+    spec:
+      containers:
+        - name: frontend
+          image: your-registry/los-frontend:1.0.0
+          ports:
+            - containerPort: 80
+          env:
+            - name: VITE_BACKEND_URL
+              value: "/api"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: los
+spec:
+  selector: { app: frontend }
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: integration
+  namespace: los
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: integration }
+  template:
+    metadata:
+      labels: { app: integration }
+    spec:
+      containers:
+        - name: node-red
+          image: your-registry/los-integration:1.0.0
+          ports:
+            - containerPort: 1880
+          env:
+            # MongoDB
+            - name: MONGO_URI
+              value: "mongodb://mongodb-headless.core.svc.cluster.local:27017/backend"
+
+            # Redis
+            - name: REDIS_HOST
+              value: "redis-master.redis-ns.svc.cluster.local"
+            - name: REDIS_PORT
+              value: "6379"
+
+            # MinIO
+            - name: MINIO_ENDPOINT
+              value: "http://minio.core.svc.cluster.local:9000"
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: accessKey
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: secretKey
+            - name: MINIO_BUCKET
+              value: "los-bucket"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: integration
+  namespace: los
+spec:
+  selector: { app: integration }
+  ports:
+    - name: http
+      port: 1880
+      targetPort: 1880
+
+---
+# Ingress using ingress-nginx
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: los-ingress
+  namespace: los
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+spec:
+  rules:
+    - host: los.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port: { number: 80 }
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port: { number: 3000 }
+    - host: integration.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: integration
+                port: { number: 1880 }
+
+---
+# Secrets
+apiVersion: v1
+kind: Secret
+metadata:
+  name: minio-secret
+  namespace: los
+type: Opaque
+stringData:
+  accessKey: "admin"
+  secretKey: "admin123"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: redis-secret
+  namespace: los
+type: Opaque
+stringData:
+  password: ""

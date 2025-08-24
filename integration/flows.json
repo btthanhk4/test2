@@ -1,0 +1,83 @@
+[
+  {
+    "id": "http-in-ping",
+    "type": "http in",
+    "z": "flow1",
+    "name": "Ping",
+    "url": "/int/ping",
+    "method": "get",
+    "swaggerDoc": "",
+    "x": 160,
+    "y": 160,
+    "wires": [
+      [
+        "function-payload"
+      ]
+    ]
+  },
+  {
+    "id": "function-payload",
+    "type": "function",
+    "z": "flow1",
+    "name": "Build payload",
+    "func": "msg.payload = { ping: 'pong', at: new Date().toISOString() };\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 360,
+    "y": 160,
+    "wires": [
+      [
+        "http-response"
+      ]
+    ]
+  },
+  {
+    "id": "http-response",
+    "type": "http response",
+    "z": "flow1",
+    "name": "",
+    "statusCode": "",
+    "headers": {},
+    "x": 570,
+    "y": 160,
+    "wires": []
+  },
+  {
+    "id": "http-in-echo",
+    "type": "http in",
+    "z": "flow1",
+    "name": "Decision mock",
+    "url": "/int/decision",
+    "method": "post",
+    "swaggerDoc": "",
+    "x": 170,
+    "y": 240,
+    "wires": [
+      [
+        "function-decision"
+      ]
+    ]
+  },
+  {
+    "id": "function-decision",
+    "type": "function",
+    "z": "flow1",
+    "name": "Scoring mock",
+    "func": "const { applicant = {}, creditScore = 700 } = msg.payload || {};\nconst approved = creditScore >= 650;\nmsg.payload = { approved, score: creditScore, applicant };\nreturn msg;",
+    "outputs": 1,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 380,
+    "y": 240,
+    "wires": [
+      [
+        "http-response"
+      ]
+    ]
+  }
+]
