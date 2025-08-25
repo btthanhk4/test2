@@ -94,11 +94,10 @@ spec:
       containers:
         - name: frontend
           image: btthanhk4/los-frontend:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 80
-          env:
-            - name: VITE_BACKEND_URL
-              value: "/api"
+
 
 ---
 apiVersion: v1
