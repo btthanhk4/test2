@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: btthanhk4/los-backend:1.0.0
+          image: btthanhk4/los-backend:latest
           ports:
             - containerPort: 3000
           env:
@@ -39,7 +39,11 @@ spec:
 
             # MinIO
             - name: MINIO_ENDPOINT
-              value: "http://minio.core.svc.cluster.local:9000"
+              value: "minio.core.svc.cluster.local"
+            - name: MINIO_PORT
+              value: "9000"
+            - name: MINIO_USE_SSL
+              value: "false"
             - name: MINIO_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
@@ -89,7 +93,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: btthanhk4/los-frontend:1.0.0
+          image: btthanhk4/los-frontend:latest
           ports:
             - containerPort: 80
           env:
@@ -128,7 +132,7 @@ spec:
     spec:
       containers:
         - name: node-red
-          image: btthanhk4/los-integration:1.0.0
+          image: btthanhk4/los-integration:latest
           ports:
             - containerPort: 1880
           env:
@@ -144,7 +148,11 @@ spec:
 
             # MinIO
             - name: MINIO_ENDPOINT
-              value: "http://minio.core.svc.cluster.local:9000"
+              value: "minio.core.svc.cluster.local"
+            - name: MINIO_PORT
+              value: "9000"
+            - name: MINIO_USE_SSL
+              value: "false"
             - name: MINIO_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
